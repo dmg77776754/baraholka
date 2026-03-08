@@ -1,35 +1,42 @@
-name: Deploy Bарахолка to GitHub Pages
+name: Deploy Барахолка to GitHub Pages
 
 on:
   push:
     branches:
-      - main  # запускаем только при пуше в main
+      - main  # Запускается при пуше в main ветку
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Клонируем репо
-      - uses: actions/checkout@v3
+      # 1. Клонируем репозиторий
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # 2. Настраиваем Node.js
+      # 2. Настраиваем Node.js (LTS)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '20.x'
 
-      # 3. Устанавливаем зависимости
+      # 3. Проверяем версии Node и npm (debug)
+      - name: Check Node and npm versions
+        run: |
+          node -v
+          npm -v
+
+      # 4. Устанавливаем зависимости
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # 4. Собираем проект
-      - name: Build
+      # 5. Сборка проекта
+      - name: Build project
         run: npm run build
 
-      # 5. Деплой на GitHub Pages
-      - name: Deploy
+      # 6. Деплой на GitHub Pages
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist  # папка сборки Vite
+          publish_dir: ./dist  # Папка сборки Vite
