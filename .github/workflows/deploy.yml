@@ -1,26 +1,46 @@
-```yaml
-name: Deploy to GitHub Pages
+name: Deploy Барахолка to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # 1. Клонируем репозиторий
+      - uses: actions/checkout@v3
+
+      # 2. Настройка Node.js (LTS)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
-      - run: npm install
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+          node-version: '20.x'
+
+      # 3. Проверка версий Node/NPM
+      - name: Check Node and NPM
+        run: |
+          node -v
+          npm -v
+
+      # 4. Установка зависимостей
+      - name: Install dependencies
+        run: npm ci
+
+      # 5. Сборка проекта
+      - name: Build project
+        run: npm run build
+
+      # 6. Деплой на GitHub Pages
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: dist
-      - uses: actions/deploy-pages@v4
-```
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages   # ветка для GitHub Pages
+          publish_dir: ./dist        # папка сборки Vite
+          user_name: "github-actions"
+          user_email: "github-actions@users.noreply.github.com"
+          keep_files: true
