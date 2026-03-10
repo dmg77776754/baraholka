@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
-import type { Category, ProductCategory, District } from '../types';
+import { useState, useRef, useEffect } from 'react';
+import type { Category, ProductCategory, District, Listing } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
-import { addListing } from '../store';
+import { addListing, updateMyListing } from '../store';
 import { getTelegramUser } from '../telegram';
+import { addToMyListings } from '../storage';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
 const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -12,21 +13,31 @@ const PRODUCT_CATEGORIES: ProductCategory[] = [
 const DISTRICTS: District[] = ['pervomayskoe', 'kivenappa'];
 const MAX_PHOTOS = 3;
 
-export function CreateListingForm({ onClose }: { onClose: () => void }) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState<Category>('sell');
-  const [productCategory, setProductCategory] = useState<ProductCategory>('other');
-  const [district, setDistrict] = useState<District>('pervomayskoe');
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [contactTelegram, setContactTelegram] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
+export function CreateListingForm({ 
+  onClose, 
+  onListingAdded,
+  editingListing,
+}: { 
+  onClose: () => void; 
+  onListingAdded?: () => void;
+  editingListing?: Listing;
+}) {
+  const [title, setTitle] = useState(editingListing?.title || '');
+  const [description, setDescription] = useState(editingListing?.description || '');
+  const [price, setPrice] = useState(editingListing?.price || '');
+  const [category, setCategory] = useState<Category>(editingListing?.category || 'sell');
+  const [productCategory, setProductCategory] = useState<ProductCategory>(editingListing?.product_category || 'other');
+  const [district, setDistrict] = useState<District>(editingListing?.district || 'pervomayskoe');
+  const [photos, setPhotos] = useState<string[]>(editingListing?.photos || []);
+  const [contactTelegram, setContactTelegram] = useState(editingListing?.contact_telegram || '');
+  const [contactPhone, setContactPhone] = useState(editingListing?.contact_phone || '');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const tgUser = getTelegramUser();
+  const isEditMode = !!editingListing;
 
   const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -72,50 +83,105 @@ export function CreateListingForm({ onClose }: { onClose: () => void }) {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!title.trim()) { setError('Укажите заголовок'); return; }
-    if (!price.trim()) { setError('Укажите цену'); return; }
-    if (!contactTelegram.trim() && !contactPhone.trim()) { setError('Укажите хотя бы один контакт (Telegram или телефон)'); return; }
+    // Валидация
+    if (!title.trim()) { 
+      setError('Укажите заголовок'); 
+      return; 
+    }
+    if (!price.trim()) { 
+      setError('Укажите цену'); 
+      return; 
+    }
+    if (!contactTelegram.trim() && !contactPhone.trim()) { 
+      setError('Укажите хотя бы один контакт (Telegram или телефон)'); 
+      return; 
+    }
 
     const mainContact = contactTelegram.trim() || contactPhone.trim();
 
-    addListing({
-      title: title.trim(),
-      description: description.trim(),
-      price: price.trim(),
-      category,
-      productCategory,
-      district,
-      photos,
-      contact: mainContact,
-      contactTelegram: contactTelegram.trim() || undefined,
-      contactPhone: contactPhone.trim() || undefined,
-      telegramUserId: tgUser?.id,
-      telegramUsername: tgUser?.username,
-    });
+    try {
+      setIsLoading(true);
+      
+      if (isEditMode && editingListing) {
+        // Режим редактирования с проверкой владельца
+        if (!tgUser?.id) {
+          throw new Error('Ошибка: не удалось определить пользователя');
+        }
+        
+        await updateMyListing(editingListing.id, tgUser.id, {
+          title: title.trim(),
+          description: description.trim(),
+          price: price.trim(),
+          photos,
+          contact_telegram: contactTelegram.trim() || undefined,
+          contact_phone: contactPhone.trim() || undefined,
+        });
+      } else {
+        // Режим добавления нового объявления
+        const result = await addListing({
+          title: title.trim(),
+          description: description.trim(),
+          price: price.trim(),
+          category,
+          product_category: productCategory,
+          district,
+          photos,
+          contact: mainContact,
+          contact_telegram: contactTelegram.trim() || undefined,
+          contact_phone: contactPhone.trim() || undefined,
+          telegram_user_id: tgUser?.id,
+          telegram_username: tgUser?.username,
+        });
 
-    setSubmitted(true);
+        // Сохранить ID в localStorage
+        if (result.id) {
+          addToMyListings(result.id);
+        }
+      }
+
+      // Успешно отправлено
+      setSubmitted(true);
+      
+      // Уведомить родительский компонент об успешном добавлении
+      if (onListingAdded) {
+        onListingAdded();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ошибка при отправке объявления';
+      setError(message);
+      console.error('Error adding listing:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (submitted) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
         <div className="mb-4 text-6xl animate-bounce">✅</div>
-        <h2 className="mb-2 text-xl font-bold text-gray-900">Объявление отправлено!</h2>
+        <h2 className="mb-2 text-xl font-bold text-gray-900">
+          {isEditMode ? 'Объявление обновлено!' : 'Объявление отправлено!'}
+        </h2>
         <p className="mb-6 text-sm text-gray-500">
-          Ваше объявление отправлено на модерацию. После проверки оно появится в ленте.
+          {isEditMode 
+            ? 'Ваши изменения сохранены.'
+            : 'Ваше объявление отправлено на модерацию. После проверки оно появится в ленте.'
+          }
         </p>
-        <div className="inline-block rounded-full bg-yellow-100 px-4 py-2 text-sm font-medium text-yellow-700">
-          ⏳ На модерации
-        </div>
+        {!isEditMode && (
+          <div className="inline-block rounded-full bg-yellow-100 px-4 py-2 text-sm font-medium text-yellow-700">
+            ⏳ На модерации
+          </div>
+        )}
         <button
           onClick={onClose}
           className="mt-8 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:shadow-md hover:shadow-blue-300/40 transition-all duration-200"
         >
-          Вернуться к объявлениям
+          {isEditMode ? 'Вернуться' : 'Вернуться к объявлениям'}
         </button>
       </div>
     );
@@ -124,7 +190,9 @@ export function CreateListingForm({ onClose }: { onClose: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 pb-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Новое объявление</h2>
+        <h2 className="text-xl font-bold text-gray-900">
+          {isEditMode ? 'Редактировать объявление' : 'Новое объявление'}
+        </h2>
         <button
           type="button"
           onClick={onClose}
@@ -185,28 +253,31 @@ export function CreateListingForm({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Type (sell/buy/free/services) */}
-      <div>
-        <label className="mb-2.5 block text-sm font-semibold text-gray-700">Тип объявления</label>
-        <div className="grid grid-cols-2 gap-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setCategory(cat)}
-              className={`rounded-xl border-2 px-3 py-2.5 text-sm font-medium transition-all ${
-                category === cat
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              {CATEGORY_LABELS[cat]}
-            </button>
-          ))}
+      {!isEditMode && (
+        <div>
+          <label className="mb-2.5 block text-sm font-semibold text-gray-700">Тип объявления</label>
+          <div className="grid grid-cols-2 gap-2">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={`rounded-xl border-2 px-3 py-2.5 text-sm font-medium transition-all ${
+                  category === cat
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {CATEGORY_LABELS[cat]}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Product Category */}
-      <div>
+      {!isEditMode && (
+        <div>
         <label className="mb-2.5 block text-sm font-semibold text-gray-700">Категория товара</label>
         <div className="grid grid-cols-3 gap-1.5">
           {PRODUCT_CATEGORIES.map((pc) => (
@@ -225,27 +296,30 @@ export function CreateListingForm({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       </div>
+      )}
 
       {/* District */}
-      <div>
-        <label className="mb-2.5 block text-sm font-semibold text-gray-700">Район</label>
-        <div className="grid grid-cols-2 gap-2">
-          {DISTRICTS.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDistrict(d)}
-              className={`rounded-xl border-2 px-3 py-2.5 text-sm font-medium transition-all ${
-                district === d
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              📍 {DISTRICT_LABELS[d]}
-            </button>
-          ))}
+      {!isEditMode && (
+        <div>
+          <label className="mb-2.5 block text-sm font-semibold text-gray-700">Район</label>
+          <div className="grid grid-cols-2 gap-2">
+            {DISTRICTS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDistrict(d)}
+                className={`rounded-xl border-2 px-3 py-2.5 text-sm font-medium transition-all ${
+                  district === d
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                📍 {DISTRICT_LABELS[d]}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Photos */}
       <div>
@@ -325,9 +399,21 @@ export function CreateListingForm({ onClose }: { onClose: () => void }) {
 
       <button
         type="submit"
-        className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-300/40 active:scale-95"
+        disabled={isLoading}
+        className={`w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all ${
+          isLoading
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg hover:shadow-blue-300/40 active:scale-95'
+        }`}
       >
-        ✅ Отправить объявление
+        {isLoading ? (
+          <span className="flex items-center justify-center gap-2">
+            <span className="inline-block animate-spin">⏳</span>
+            {isEditMode ? 'Сохраняю...' : 'Отправляется...'}
+          </span>
+        ) : (
+          isEditMode ? '✅ Сохранить изменения' : '✅ Отправить объявление'
+        )}
       </button>
     </form>
   );
