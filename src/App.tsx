@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getApprovedListings } from './store';
+import { getApprovedListings, deleteMyListing, updateListing } from './store';
 import { initTelegram, getTelegramUser } from './telegram';
 import { ListingCard } from './components/ListingCard';
+import { ListingDetail } from './components/ListingDetail';
 import { CreateListingForm } from './components/CreateListingForm';
 import { AdminPanel } from './components/AdminPanel';
+import { MyListings } from './components/MyListings';
+import { getMyListingIds, removeFromMyListings } from './storage';
 import type { Listing, Category, ProductCategory, District } from './types';
 import {
   CATEGORY_LABELS,
@@ -12,7 +15,7 @@ import {
   DISTRICT_LABELS,
 } from './types';
 
-type Page = 'feed' | 'create' | 'admin';
+type Page = 'feed' | 'create' | 'admin' | 'my-listings';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
 const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -29,21 +32,60 @@ export function App() {
   const [filterDistrict, setFilterDistrict] = useState<District | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [myListingIds, setMyListingIds] = useState<string[]>([]);
 
   const tgUser = getTelegramUser();
 
-  const refresh = useCallback(() => {
-    setListings(getApprovedListings());
+  // Загрузить одобренные объявления с Supabase
+  const refresh = useCallback(async () => {
+    try {
+      const data = await getApprovedListings();
+      setListings(data);
+    } catch (err) {
+      console.error('Error loading listings:', err);
+    }
   }, []);
 
   useEffect(() => {
     initTelegram();
     refresh();
+    // Загружаем список своих объявлений
+    setMyListingIds(getMyListingIds());
   }, [refresh]);
 
-  const goToFeed = () => {
-    refresh();
+  const goToFeed = async () => {
+    await refresh();
     setPage('feed');
+  };
+
+  const handleEditFromFeed = async (id: string) => {
+    const listing = listings.find(l => l.id === id);
+    if (listing) {
+      setSelectedListing(null);
+      // Переходим на страницу создания с редактированием
+      setPage('my-listings');
+    }
+  };
+
+  const handleDeleteFromFeed = async (id: string) => {
+    if (!tgUser?.id) {
+      alert('Ошибка: не удалось определить пользователя');
+      return;
+    }
+    
+    try {
+      // Используем функцию с проверкой владельца
+      await deleteMyListing(id, tgUser.id);
+      removeFromMyListings(id);
+      setListings(listings.filter(l => l.id !== id));
+      setMyListingIds(getMyListingIds());
+      setSelectedListing(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ошибка при удалении';
+      console.error('Error deleting listing:', message);
+      alert(message);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -101,9 +143,18 @@ export function App() {
             </button>
             <div className="flex items-center gap-2">
               {tgUser && (
-                <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
-                  👤 {tgUser.firstName || tgUser.username}
-                </span>
+                <>
+                  <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
+                    👤 {tgUser.firstName || tgUser.username}
+                  </span>
+                  <button
+                    onClick={() => setPage('my-listings')}
+                    className="rounded-lg p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                    title="Мои объявления"
+                  >
+                    📋
+                  </button>
+                </>
               )}
               <button
                 onClick={() => setPage('admin')}
@@ -278,16 +329,34 @@ export function App() {
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {filtered.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
+                  <div 
+                    key={listing.id}
+                    onClick={() => setSelectedListing(listing)}
+                    className="cursor-pointer"
+                  >
+                    <ListingCard listing={listing} />
+                  </div>
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {page === 'create' && <CreateListingForm onClose={goToFeed} />}
+        {page === 'create' && <CreateListingForm onClose={goToFeed} onListingAdded={refresh} />}
         {page === 'admin' && <AdminPanel onClose={goToFeed} />}
+        {page === 'my-listings' && <MyListings onClose={goToFeed} />}
       </main>
+
+      {/* Модальное окно с деталями объявления */}
+      {selectedListing && page === 'feed' && (
+        <ListingDetail
+          listing={selectedListing}
+          onClose={() => setSelectedListing(null)}
+          onEdit={handleEditFromFeed}
+          onDelete={handleDeleteFromFeed}
+          isMyListing={myListingIds.includes(selectedListing.id)}
+        />
+      )}
 
       {/* FAB */}
       {page === 'feed' && (

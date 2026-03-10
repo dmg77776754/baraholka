@@ -10,16 +10,17 @@ export interface Listing {
   description: string;
   price: string;
   category: Category;
-  productCategory: ProductCategory;
+  product_category: ProductCategory;
   district: District;
   photos: string[]; // base64 data URLs
   contact: string; // legacy field for backward compat
-  contactTelegram?: string; // @username
-  contactPhone?: string; // +7 900 000-00-00
-  telegramUserId?: number;
-  telegramUsername?: string;
-  isApproved: boolean;
-  createdAt: number; // timestamp
+  contact_telegram?: string; // @username
+  contact_phone?: string; // +7 900 000-00-00
+  telegram_user_id?: number;
+  telegram_username?: string;
+  is_approved: boolean;
+  created_at: string; // ISO timestamp
+  createdAt?: number; // DEPRECATED - legacy timestamp
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {
