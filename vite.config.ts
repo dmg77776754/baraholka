@@ -11,6 +11,9 @@ const __dirname = path.dirname(__filename);
 // https://vite.dev/config/
 export default defineConfig({
   base: '/baraholka/',
+  build: {
+    outDir: 'docs',  // ← Build в /docs вместо /dist
+  },
   plugins: [react(), tailwindcss(), viteSingleFile()],
   resolve: {
     alias: {
