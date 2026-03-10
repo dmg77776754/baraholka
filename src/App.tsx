@@ -4,6 +4,7 @@ import { initTelegram, getTelegramUser } from './telegram';
 import { ListingCard } from './components/ListingCard';
 import { ListingDetail } from './components/ListingDetail';
 import { CreateListingForm } from './components/CreateListingForm';
+import { EditListingForm } from './components/EditListingForm';
 import { AdminPanel } from './components/AdminPanel';
 import { MyListings } from './components/MyListings';
 import { getMyListingIds, removeFromMyListings } from './storage';
@@ -15,7 +16,7 @@ import {
   DISTRICT_LABELS,
 } from './types';
 
-type Page = 'feed' | 'create' | 'admin' | 'my-listings';
+type Page = 'feed' | 'create' | 'admin' | 'my-listings' | 'edit-listing';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
 const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -33,6 +34,7 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [myListingIds, setMyListingIds] = useState<string[]>([]);
 
   const tgUser = getTelegramUser();
@@ -62,9 +64,9 @@ export function App() {
   const handleEditFromFeed = async (id: string) => {
     const listing = listings.find(l => l.id === id);
     if (listing) {
+      setEditingListing(listing);
       setSelectedListing(null);
-      // Переходим на страницу создания с редактированием
-      setPage('my-listings');
+      setPage('edit-listing');
     }
   };
 
@@ -81,6 +83,7 @@ export function App() {
       setListings(listings.filter(l => l.id !== id));
       setMyListingIds(getMyListingIds());
       setSelectedListing(null);
+      await refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка при удалении';
       console.error('Error deleting listing:', message);
@@ -343,6 +346,13 @@ export function App() {
         )}
 
         {page === 'create' && <CreateListingForm onClose={goToFeed} onListingAdded={refresh} />}
+        {page === 'edit-listing' && editingListing && (
+          <EditListingForm 
+            listing={editingListing}
+            onClose={goToFeed}
+            onSaved={refresh}
+          />
+        )}
         {page === 'admin' && <AdminPanel onClose={goToFeed} />}
         {page === 'my-listings' && <MyListings onClose={goToFeed} />}
       </main>
