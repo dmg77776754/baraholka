@@ -10,30 +10,67 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
   const [pin, setPin] = useState('');
   const [listings, setListings] = useState<Listing[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // Загрузить все объявления при авторизации
   useEffect(() => {
     if (authed) {
-      setListings(getAllListings());
+      loadAllListings();
     }
   }, [authed]);
 
-  const refresh = () => setListings(getAllListings());
-
-  const handleToggle = (id: string) => {
-    toggleApproval(id);
-    refresh();
+  const loadAllListings = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await getAllListings();
+      setListings(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ошибка при загрузке объявлений';
+      setError(message);
+      console.error(message, err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Удалить объявление?')) {
-      deleteListing(id);
-      refresh();
+  const handleToggle = async (id: string) => {
+    try {
+      setLoadingId(id);
+      await toggleApproval(id);
+      // Обновить список после изменения
+      await loadAllListings();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ошибка при одобрении объявления';
+      setError(message);
+      console.error(message, err);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Удалить объявление?')) return;
+    
+    try {
+      setLoadingId(id);
+      await deleteListing(id);
+      // Обновить список после удаления
+      await loadAllListings();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ошибка при удалении объявления';
+      setError(message);
+      console.error(message, err);
+    } finally {
+      setLoadingId(null);
     }
   };
 
   const filtered = listings.filter((l) => {
-    if (filter === 'pending') return !l.isApproved;
-    if (filter === 'approved') return l.isApproved;
+    if (filter === 'pending') return !l.is_approved;
+    if (filter === 'approved') return l.is_approved;
     return true;
   });
 
@@ -105,11 +142,39 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
             {f === 'all'
               ? `📋 Все (${listings.length})`
               : f === 'pending'
-              ? `⏳ Ожидают (${listings.filter((l) => !l.isApproved).length})`
-              : `✅ Одобрено (${listings.filter((l) => l.isApproved).length})`}
+              ? `⏳ Ожидают (${listings.filter((l) => !l.is_approved).length})`
+              : `✅ Одобрено (${listings.filter((l) => l.is_approved).length})`}
           </button>
         ))}
       </div>
+
+      {/* Ошибка */}
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-50 p-3.5 text-sm text-red-600 border border-red-200 flex items-start gap-2">
+          <span className="text-lg leading-none">❌</span>
+          <div>
+            <p className="font-medium">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="text-xs text-red-500 hover:text-red-700 underline mt-1"
+            >
+              Скрыть
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-8">
+          <div className="text-center">
+            <div className="inline-block animate-spin mb-2">
+              <div className="w-6 h-6 border-3 border-blue-200 border-t-blue-500 rounded-full"></div>
+            </div>
+            <p className="text-xs text-gray-500">Загрузка...</p>
+          </div>
+        </div>
+      )}
 
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -123,7 +188,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
           <div
             key={listing.id}
             className={`rounded-xl border-2 p-3.5 transition-all ${
-              listing.isApproved
+              listing.is_approved
                 ? 'border-green-200 bg-gradient-to-br from-green-50 to-green-50/50'
                 : 'border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-50/50'
             }`}
@@ -137,12 +202,12 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                   <span className="font-medium">{CATEGORY_LABELS[listing.category]}</span>
                   {' · '}
                   <span className="text-gray-500">{listing.price}</span>
-                  {listing.contactTelegram && <span> · 💬 {listing.contactTelegram}</span>}
-                  {listing.contactPhone && <span> · 📱 {listing.contactPhone}</span>}
+                  {listing.contact_telegram && <span> · 💬 {listing.contact_telegram}</span>}
+                  {listing.contact_phone && <span> · 📱 {listing.contact_phone}</span>}
                 </p>
-                {(listing.productCategory || listing.district) && (
+                {(listing.product_category || listing.district) && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {listing.productCategory && PRODUCT_CATEGORY_LABELS[listing.productCategory]}
+                    {listing.product_category && PRODUCT_CATEGORY_LABELS[listing.product_category]}
                     {listing.productCategory && listing.district && ' · '}
                     {listing.district && `📍 ${DISTRICT_LABELS[listing.district]}`}
                   </p>
@@ -150,12 +215,12 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
               </div>
               <span
                 className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap shadow-sm ${
-                  listing.isApproved
+                  listing.is_approved
                     ? 'bg-green-100 text-green-700'
                     : 'bg-yellow-100 text-yellow-700'
                 }`}
               >
-                {listing.isApproved ? '✓ Одобрено' : '⏳ Ожидает'}
+                {listing.is_approved ? '✓ Одобрено' : '⏳ Ожидает'}
               </span>
             </div>
 
@@ -166,19 +231,27 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
             <div className="flex gap-2">
               <button
                 onClick={() => handleToggle(listing.id)}
+                disabled={loadingId === listing.id}
                 className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
-                  listing.isApproved
+                  loadingId === listing.id
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : listing.is_approved
                     ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                     : 'bg-green-100 text-green-700 hover:bg-green-200'
                 }`}
               >
-                {listing.isApproved ? '⏳ Снять' : '✓ Одобрить'}
+                {loadingId === listing.id ? '⏳' : listing.is_approved ? '⏳ Снять' : '✓ Одобрить'}
               </button>
               <button
                 onClick={() => handleDelete(listing.id)}
-                className="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-200 transition-all"
+                disabled={loadingId === listing.id}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                  loadingId === listing.id
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                }`}
               >
-                🗑️ Удалить
+                {loadingId === listing.id ? '⏳' : '🗑️ Удалить'}
               </button>
             </div>
           </div>
