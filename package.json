@@ -11,7 +11,7 @@
     "start": "vite"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.0",
+    "@supabase/supabase-js": "^2.99.1",
     "@types/uuid": "^10.0.0",
     "clsx": "2.1.1",
     "react": "19.2.3",

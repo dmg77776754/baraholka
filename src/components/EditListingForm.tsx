@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Listing, Category, ProductCategory, District } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
-import { updateListing } from '../store';
+import { updateMyListing } from '../store';
+import { getTelegramUser } from '../telegram';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
 const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -44,7 +45,11 @@ export function EditListingForm({
     try {
       setIsLoading(true);
       
-      await updateListing(listing.id, {
+      const tgUser = getTelegramUser();
+      if (!tgUser?.id) {
+        throw new Error('Ошибка: не удалось определить пользователя Telegram');
+      }
+      await updateMyListing(listing.id, tgUser.id, {
         title: title.trim(),
         description: description.trim(),
         price: price.trim(),

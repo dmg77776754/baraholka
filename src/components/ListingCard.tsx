@@ -1,5 +1,6 @@
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, CATEGORY_COLORS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
+import { getTelegramLink, getPhoneLink } from '../telegram';
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const timeAgo = getTimeAgo(listing.created_at);
@@ -80,6 +81,32 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <div className="mt-auto pt-2 border-t border-gray-100">
           <span className="text-lg font-bold text-gray-900">{listing.price}</span>
         </div>
+
+        {/* Contacts */}
+        {(listing.contact_telegram || listing.contact_phone) && (
+          <div className="pt-2 space-y-1.5 border-t border-gray-100">
+            {listing.contact_telegram && (
+              <a
+                href={getTelegramLink(listing.contact_telegram)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-all border border-blue-200"
+              >
+                💬 Telegram
+              </a>
+            )}
+            {listing.contact_phone && (
+              <a
+                href={getPhoneLink(listing.contact_phone)}
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center gap-1.5 rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-100 transition-all border border-green-200"
+              >
+                📱 Позвонить
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
