@@ -1,18 +1,15 @@
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, CATEGORY_COLORS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { getTelegramLink, getPhoneLink } from '../telegram';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getTelegramUser } from '../telegram';
 import { addToFavorites, removeFromFavorites, isFavorite } from '../store';
 import { addToFavoritesLocal, removeFromFavoritesLocal, isFavoriteLocal } from '../storage';
 
-export function ListingCard({ 
-  listing, 
-  onFavoriteToggle 
-}: { 
+export const ListingCard: React.FC<{ 
   listing: Listing;
   onFavoriteToggle?: () => void;
-}) {
+}> = ({ listing, onFavoriteToggle }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const timeAgo = getTimeAgo(listing.created_at);
@@ -37,31 +34,22 @@ export function ListingCard({
     checkFavorite();
   }, [listing.id]);
 
-  const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Timeout')), ms)
-    );
-    return Promise.race([promise, timeout]) as Promise<T>;
-  };
-
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
+    
     const tgUser = getTelegramUser();
 
     setIsLoading(true);
     try {
       if (tgUser?.id) {
         if (isFavorited) {
-          await withTimeout(removeFromFavorites(listing.id, tgUser.id), 5000);
+          await removeFromFavorites(listing.id, tgUser.id);
           setIsFavorited(false);
         } else {
-          await withTimeout(addToFavorites(listing.id, tgUser.id), 5000);
+          await addToFavorites(listing.id, tgUser.id);
           setIsFavorited(true);
         }
-        // Обновление списка только когда используется supabase
-        onFavoriteToggle?.();
       } else {
         // Fallback: localStorage
         if (isFavorited) {
@@ -72,8 +60,8 @@ export function ListingCard({
           setIsFavorited(true);
         }
       }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
+
+      onFavoriteToggle?.();
     } finally {
       setIsLoading(false);
     }
