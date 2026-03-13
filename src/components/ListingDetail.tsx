@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
-import { getTelegramLink, getPhoneLink } from '../telegram';
+import { getTelegramLink, getPhoneLink, normalizePhone } from '../telegram';
 
 export function ListingDetail({
   listing,
@@ -176,7 +176,7 @@ export function ListingDetail({
               </a>
             )}
 
-            {listing.contact_phone && (
+            {listing.contact_phone && normalizePhone(listing.contact_phone) && (
               <a
                 href={getPhoneLink(listing.contact_phone)}
                 onClick={(e) => {
@@ -188,6 +188,12 @@ export function ListingDetail({
                 📱 Позвонить
                 <span className="text-xs text-gray-500">({listing.contact_phone})</span>
               </a>
+            )}
+            {listing.contact_phone && !normalizePhone(listing.contact_phone) && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm font-medium text-red-600 border border-red-200">
+                ⚠️ Неверный номер
+                <span className="text-xs text-red-500">{listing.contact_phone}</span>
+              </div>
             )}
 
             {!listing.contact_telegram && !listing.contact_phone && (

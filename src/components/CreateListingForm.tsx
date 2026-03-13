@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Category, ProductCategory, District, Listing } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { addListing, updateMyListing } from '../store';
-import { getTelegramUser } from '../telegram';
+import { getTelegramUser, normalizePhone, isValidPhone, normalizeTelegramUsername, isValidTelegramUsername } from '../telegram';
 import { addToMyListings } from '../storage';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
@@ -34,6 +34,8 @@ export function CreateListingForm({
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [phoneValid, setPhoneValid] = useState(true);
+  const [tgValid, setTgValid] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const tgUser = getTelegramUser();
@@ -92,16 +94,36 @@ export function CreateListingForm({
       setError('Укажите заголовок'); 
       return; 
     }
+
     if (!price.trim()) { 
       setError('Укажите цену'); 
       return; 
     }
+
     if (!contactTelegram.trim() && !contactPhone.trim()) { 
       setError('Укажите хотя бы один контакт (Telegram или телефон)'); 
       return; 
     }
 
-    const mainContact = contactTelegram.trim() || contactPhone.trim();
+    // Проверка формата контактов
+    const tgTrimmed = contactTelegram.trim();
+    const phoneTrimmed = contactPhone.trim();
+
+    if (tgTrimmed && !isValidTelegramUsername(tgTrimmed)) {
+      setTgValid(false);
+      setError('Неверный Telegram-username. Используйте @username или username (5–32 символа, буквы/цифры/_)');
+      return;
+    }
+
+    if (phoneTrimmed && !isValidPhone(phoneTrimmed)) {
+      setPhoneValid(false);
+      setError('Неверный телефон. Укажите корректный номер, например +7XXXXXXXXXX или 8XXXXXXXXXX');
+      return;
+    }
+
+    const normalizedTelegram = tgTrimmed ? normalizeTelegramUsername(tgTrimmed) : null;
+    const normalizedPhone = phoneTrimmed ? normalizePhone(phoneTrimmed) : null;
+    const mainContact = normalizedTelegram ? `@${normalizedTelegram}` : normalizedPhone || '';
 
     try {
       setIsLoading(true);
@@ -117,8 +139,8 @@ export function CreateListingForm({
           description: description.trim(),
           price: price.trim(),
           photos,
-          contact_telegram: contactTelegram.trim() || undefined,
-          contact_phone: contactPhone.trim() || undefined,
+          contact_telegram: normalizedTelegram || undefined,
+          contact_phone: normalizedPhone || undefined,
         });
       } else {
         // Режим добавления нового объявления
@@ -131,8 +153,8 @@ export function CreateListingForm({
           district,
           photos,
           contact: mainContact,
-          contact_telegram: contactTelegram.trim() || undefined,
-          contact_phone: contactPhone.trim() || undefined,
+          contact_telegram: normalizedTelegram || undefined,
+          contact_phone: normalizedPhone || undefined,
           telegram_user_id: tgUser?.id,
           telegram_username: tgUser?.username,
         });
@@ -246,10 +268,13 @@ export function CreateListingForm({
           type="text"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          placeholder="Например: 5 000 ₽ или Бесплатно"
+          placeholder="Например: 5000"
           maxLength={50}
           className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-blue-500 focus:ring-3 focus:ring-blue-100 shadow-sm"
         />
+        <p className="mt-2 text-xs text-gray-500">
+          Указывайте цену в рублях без валютных символов (только цифры и пробелы).
+        </p>
       </div>
 
       {/* Type (sell/buy/free/services) */}
@@ -374,12 +399,20 @@ export function CreateListingForm({
             <input
               type="text"
               value={contactTelegram}
-              onChange={(e) => setContactTelegram(e.target.value)}
+              onChange={(e) => {
+                setContactTelegram(e.target.value);
+                if (!tgValid) setTgValid(true);
+              }}
               placeholder="@username"
               maxLength={100}
-              className="w-full rounded-lg border border-gray-200 pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-blue-500 focus:ring-3 focus:ring-blue-100 bg-white"
+              className={`w-full rounded-lg border pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-blue-500 focus:ring-3 focus:ring-blue-100 bg-white ${
+                tgValid ? 'border-gray-200' : 'border-red-300 bg-red-50'
+              }`}
             />
           </div>
+          {!tgValid && (
+            <p className="mt-2 text-xs text-red-600">Неверный формат Telegram-username (буквы, цифры, _; 5–32 символа)</p>
+          )}
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-600">Телефон</label>
@@ -388,12 +421,20 @@ export function CreateListingForm({
             <input
               type="tel"
               value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
+              onChange={(e) => {
+                setContactPhone(e.target.value);
+                if (!phoneValid) setPhoneValid(true);
+              }}
               placeholder="+7 900 000-00-00"
               maxLength={20}
-              className="w-full rounded-lg border border-gray-200 pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-blue-500 focus:ring-3 focus:ring-blue-100 bg-white"
+              className={`w-full rounded-lg border pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-blue-500 focus:ring-3 focus:ring-blue-100 bg-white ${
+                phoneValid ? 'border-gray-200' : 'border-red-300 bg-red-50'
+              }`}
             />
           </div>
+          {!phoneValid && (
+            <p className="mt-2 text-xs text-red-600">Неверный формат номера (например +7 999 123-45-67)</p>
+          )}
         </div>
       </div>
 
