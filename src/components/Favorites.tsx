@@ -23,13 +23,19 @@ export function Favorites({ onClose }: { onClose: () => void }) {
       setIsLoading(true);
       setError(null);
 
+      // Сначала пытаемся загрузить из Supabase (если есть пользователь)
       if (tgUser?.id) {
-        const data = await getFavorites(tgUser.id);
-        setFavorites(data);
-        return;
+        try {
+          const data = await getFavorites(tgUser.id);
+          setFavorites(data);
+          return;
+        } catch (supabaseError) {
+          console.warn('Supabase favorites failed, falling back to localStorage:', supabaseError);
+          // Продолжаем к localStorage fallback
+        }
       }
 
-      // Fallback: localStorage favorites (без Telegram)
+      // Fallback: localStorage favorites
       const favoriteIds = getFavoriteIds();
       if (favoriteIds.length === 0) {
         setFavorites([]);
@@ -52,27 +58,6 @@ export function Favorites({ onClose }: { onClose: () => void }) {
     // Reload favorites when a favorite is toggled
     loadFavorites();
   };
-
-  if (!tgUser) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="sticky top-0 z-30 bg-white/98 backdrop-blur-lg border-b border-gray-100 shadow-md">
-          <div className="flex items-center justify-between p-4">
-            <h1 className="text-xl font-bold text-gray-900">❤️ Избранное</h1>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-        <div className="p-8 text-center">
-          <p className="text-gray-500">Необходимо авторизоваться через Telegram</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">

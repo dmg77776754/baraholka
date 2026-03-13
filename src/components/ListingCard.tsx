@@ -42,13 +42,26 @@ export const ListingCard: React.FC<{
 
     setIsLoading(true);
     try {
+      // Сначала пытаемся использовать Supabase (если есть пользователь)
       if (tgUser?.id) {
-        if (isFavorited) {
-          await removeFromFavorites(listing.id, tgUser.id);
-          setIsFavorited(false);
-        } else {
-          await addToFavorites(listing.id, tgUser.id);
-          setIsFavorited(true);
+        try {
+          if (isFavorited) {
+            await removeFromFavorites(listing.id, tgUser.id);
+            setIsFavorited(false);
+          } else {
+            await addToFavorites(listing.id, tgUser.id);
+            setIsFavorited(true);
+          }
+        } catch (supabaseError) {
+          console.warn('Supabase favorites failed, falling back to localStorage:', supabaseError);
+          // Fallback: localStorage
+          if (isFavorited) {
+            removeFromFavoritesLocal(listing.id);
+            setIsFavorited(false);
+          } else {
+            addToFavoritesLocal(listing.id);
+            setIsFavorited(true);
+          }
         }
       } else {
         // Fallback: localStorage
@@ -62,6 +75,8 @@ export const ListingCard: React.FC<{
       }
 
       onFavoriteToggle?.();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
     } finally {
       setIsLoading(false);
     }
