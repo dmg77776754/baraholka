@@ -7,6 +7,7 @@ import { CreateListingForm } from './components/CreateListingForm';
 import { EditListingForm } from './components/EditListingForm';
 import { AdminPanel } from './components/AdminPanel';
 import { MyListings } from './components/MyListings';
+import { Favorites } from './components/Favorites';
 import { getMyListingIds, removeFromMyListings } from './storage';
 import type { Listing, Category, ProductCategory, District } from './types';
 import {
@@ -16,7 +17,9 @@ import {
   DISTRICT_LABELS,
 } from './types';
 
-type Page = 'feed' | 'create' | 'admin' | 'my-listings' | 'edit-listing';
+type Page = 'feed' | 'create' | 'admin' | 'my-listings' | 'edit-listing' | 'favorites';
+
+type SortOption = 'newest' | 'price_low' | 'price_high' | 'popular';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
 const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -36,6 +39,7 @@ export function App() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [myListingIds, setMyListingIds] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   const tgUser = getTelegramUser();
 
@@ -116,6 +120,29 @@ export function App() {
     return result;
   }, [listings, filterCat, filterProduct, filterDistrict, searchQuery]);
 
+  const parsePrice = (price: string): number => {
+    const cleaned = price.replace(/[^\d.,]/g, '').replace(',', '.');
+    const parsed = parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+  };
+
+  const sortedListings = useMemo(() => {
+    const list = [...filtered];
+
+    if (sortBy === 'price_low') {
+      list.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+    } else if (sortBy === 'price_high') {
+      list.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+    } else if (sortBy === 'newest') {
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sortBy === 'popular') {
+      // Пока не хранится явная популярность, сортируем по дате как запасной вариант
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
+    return list;
+  }, [filtered, sortBy]);
+
   const resetFilters = () => {
     setFilterCat('all');
     setFilterProduct('all');
@@ -137,28 +164,74 @@ export function App() {
       <header className="sticky top-0 z-30 bg-white/98 backdrop-blur-lg border-b border-gray-100 shadow-md">
         <div className="mx-auto max-w-lg px-4 py-3">
           <div className="flex items-center justify-between">
-            <button onClick={goToFeed} className="flex items-center gap-3 group">
-              <span className="text-3xl group-hover:scale-110 transition-transform">🏪</span>
-              <div className="flex flex-col items-start">
-                <span className="text-xs font-bold text-gray-400 tracking-widest">МАРКЕТПЛЕЙС</span>
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Барахолка</span>
-              </div>
+            <button
+              onClick={goToFeed}
+              className="flex items-center gap-2 group"
+              aria-label="На главную"
+            >
+              <svg
+                className="h-7 w-7 text-blue-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M6 7V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M4 7h16v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 12h6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M9 16h6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+                Барахолка
+              </span>
             </button>
             <div className="flex items-center gap-2">
-              {tgUser && (
-                <>
-                  <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
-                    👤 {tgUser.firstName || tgUser.username}
-                  </span>
-                  <button
-                    onClick={() => setPage('my-listings')}
-                    className="rounded-lg p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                    title="Мои объявления"
-                  >
-                    📋
-                  </button>
-                </>
+              {tgUser ? (
+                <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
+                  👤 {tgUser.firstName || tgUser.username}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
+                  🚫 Не в Telegram
+                </span>
               )}
+              <button
+                onClick={() => setPage('my-listings')}
+                className="flex flex-col items-center rounded-lg p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                title="Мои объявления"
+              >
+                <span className="text-xl">📋</span>
+                <span className="text-[10px] mt-1 text-gray-500">Мои</span>
+              </button>
+              <button
+                onClick={() => setPage('favorites')}
+                className="flex flex-col items-center rounded-lg p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
+                title="Избранное"
+              >
+                <span className="text-xl">❤️</span>
+                <span className="text-[10px] mt-1 text-gray-500">Изб.</span>
+              </button>
               <button
                 onClick={() => setPage('admin')}
                 className="rounded-lg p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
@@ -330,17 +403,33 @@ export function App() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {filtered.map((listing) => (
-                  <div 
-                    key={listing.id}
-                    onClick={() => setSelectedListing(listing)}
-                    className="cursor-pointer"
+              <>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="text-xs text-gray-500">Сортировка:</div>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
-                    <ListingCard listing={listing} />
-                  </div>
-                ))}
-              </div>
+                    <option value="newest">Сначала новые</option>
+                    <option value="price_low">Цена ↑</option>
+                    <option value="price_high">Цена ↓</option>
+                    <option value="popular">Популярные</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {sortedListings.map((listing) => (
+                    <div 
+                      key={listing.id}
+                      onClick={() => setSelectedListing(listing)}
+                      className="cursor-pointer"
+                    >
+                      <ListingCard listing={listing} onFavoriteToggle={refresh} />
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -355,6 +444,7 @@ export function App() {
         )}
         {page === 'admin' && <AdminPanel onClose={goToFeed} />}
         {page === 'my-listings' && <MyListings onClose={goToFeed} />}
+        {page === 'favorites' && <Favorites onClose={goToFeed} />}
       </main>
 
       {/* Модальное окно с деталями объявления */}

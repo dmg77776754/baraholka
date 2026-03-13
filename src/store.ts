@@ -112,7 +112,7 @@ export async function updateMyListing(
   // Проверяем что объявление принадлежит пользователю
   const { data: listing, error: fetchError } = await supabase
     .from('listings')
-    .select('telegram_user_id')
+    .select('telegram_user_id, is_approved')
     .eq('id', id)
     .single();
 
@@ -121,10 +121,16 @@ export async function updateMyListing(
     throw new Error('Вы не можете редактировать чужое объявление');
   }
 
+  // Если объявление было одобрено, после редактирования отправляем на модерацию
+  const finalUpdateData = {
+    ...updateData,
+    ...(listing.is_approved ? { is_approved: false } : {}),
+  };
+
   // Обновляем объявление
   const { data, error } = await supabase
     .from('listings')
-    .update(updateData)
+    .update(finalUpdateData)
     .eq('id', id)
     .select()
     .single();
@@ -177,4 +183,81 @@ export async function deleteMyListing(id: string, telegramUserId: number): Promi
     .eq('id', id);
 
   if (error) throw error;
+}
+
+// Функции для избранных объявлений
+
+// Добавить в избранное
+export async function addToFavorites(listingId: string, userId: number): Promise<void> {
+  const { error } = await supabase
+    .from('favorites')
+    .insert({
+      user_id: userId,
+      listing_id: listingId,
+    });
+
+  if (error) {
+    // Если уже в избранном, игнорируем ошибку
+    if (error.code === '23505') return; // unique_violation
+    throw error;
+  }
+}
+
+// Удалить из избранного
+export async function removeFromFavorites(listingId: string, userId: number): Promise<void> {
+  const { error } = await supabase
+    .from('favorites')
+    .delete()
+    .eq('listing_id', listingId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+// Проверить, в избранном ли объявление
+export async function isFavorite(listingId: string, userId: number): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('favorites')
+    .select('id')
+    .eq('listing_id', listingId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+  return !!data;
+}
+
+// Получить избранные объявления пользователя
+export async function getFavorites(userId: number): Promise<Listing[]> {
+  const { data, error } = await supabase
+    .from('favorites')
+    .select(`
+      listing_id,
+      listings (
+        id,
+        title,
+        description,
+        price,
+        category,
+        product_category,
+        district,
+        photos,
+        contact,
+        contact_telegram,
+        contact_phone,
+        telegram_user_id,
+        telegram_username,
+        is_approved,
+        created_at
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Извлекаем объявления из результата
+  return data
+    .map((item: any) => item.listings)
+    .filter((listing: any) => listing && listing.is_approved) as Listing[];
 }

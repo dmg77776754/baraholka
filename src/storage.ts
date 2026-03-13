@@ -63,3 +63,44 @@ export function clearMyListings(): void {
     console.error('Error clearing my listings:', err);
   }
 }
+
+/**
+ * LocalStorage favorites (для случаев без Telegram)
+ */
+const FAVORITES_KEY = 'baraholka_favorites';
+
+export function getFavoriteIds(): string[] {
+  try {
+    const stored = localStorage.getItem(FAVORITES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (err) {
+    console.error('Error reading favorites from localStorage:', err);
+    return [];
+  }
+}
+
+export function addToFavoritesLocal(listingId: string): void {
+  try {
+    const ids = getFavoriteIds();
+    if (!ids.includes(listingId)) {
+      ids.push(listingId);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
+    }
+  } catch (err) {
+    console.error('Error saving favorite to localStorage:', err);
+  }
+}
+
+export function removeFromFavoritesLocal(listingId: string): void {
+  try {
+    const ids = getFavoriteIds();
+    const filtered = ids.filter((id) => id !== listingId);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(filtered));
+  } catch (err) {
+    console.error('Error removing favorite from localStorage:', err);
+  }
+}
+
+export function isFavoriteLocal(listingId: string): boolean {
+  return getFavoriteIds().includes(listingId);
+}

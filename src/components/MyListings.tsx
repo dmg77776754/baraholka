@@ -203,7 +203,7 @@ export function MyListings({ onClose }: { onClose: () => void }) {
               <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-semibold text-gray-900 truncate">{listing.title}</h4>
                 <p className="text-xs text-gray-600 mt-1">
-                  <span className="font-medium">{listing.price}</span>
+                  <span className="font-medium">{listing.price} ₽</span>
                   {' · '}
                   <span>{CATEGORY_LABELS[listing.category]}</span>
                 </p>

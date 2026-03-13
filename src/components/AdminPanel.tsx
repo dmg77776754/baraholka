@@ -201,7 +201,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                 <p className="text-xs text-gray-600 mt-1">
                   <span className="font-medium">{CATEGORY_LABELS[listing.category]}</span>
                   {' · '}
-                  <span className="text-gray-500">{listing.price}</span>
+                  <span className="text-gray-500">{listing.price} ₽</span>
                   {listing.contact_telegram && <span> · 💬 {listing.contact_telegram}</span>}
                   {listing.contact_phone && <span> · 📱 {listing.contact_phone}</span>}
                 </p>

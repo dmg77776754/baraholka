@@ -40,8 +40,22 @@ CREATE INDEX idx_listings_category ON listings(category);
 CREATE INDEX idx_listings_productCategory ON listings(productCategory);
 CREATE INDEX idx_listings_district ON listings(district);
 
+-- Create favorites table
+CREATE TABLE favorites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id BIGINT NOT NULL,
+  listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, listing_id)
+);
+
+-- Create indexes for favorites
+CREATE INDEX idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX idx_favorites_listing_id ON favorites(listing_id);
+
 -- Enable RLS (Row Level Security) if needed
 ALTER TABLE listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
 
 -- Create policy to allow public read of approved listings
 CREATE POLICY "Anyone can view approved listings"
@@ -59,6 +73,12 @@ CREATE POLICY "Anyone can create listings"
 -- CREATE POLICY "Admins can manage all listings"
 --   ON listings
 --   USING (auth.role() = 'authenticated');
+
+-- Create policy to allow users to manage their own favorites
+CREATE POLICY "Users can manage their own favorites"
+  ON favorites
+  FOR ALL
+  USING (user_id = auth.uid()::bigint);
 ```
 
 ## Изменения в коде

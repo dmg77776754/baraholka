@@ -6,7 +6,7 @@ import { ListingDetail } from './ListingDetail';
 import { isMyListing, removeFromMyListings } from '../storage';
 import type { Listing } from '../types';
 
-export function Listings() {
+export function Listings({ onFavoriteToggle }: { onFavoriteToggle?: () => void }) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +90,7 @@ export function Listings() {
       <div className="grid grid-cols-2 gap-3 p-4 pb-24">
         {listings.map((listing) => (
           <div key={listing.id} onClick={() => setSelectedListing(listing)} className="cursor-pointer">
-            <ListingCard listing={listing} />
+            <ListingCard listing={listing} onFavoriteToggle={onFavoriteToggle} />
           </div>
         ))}
       </div>

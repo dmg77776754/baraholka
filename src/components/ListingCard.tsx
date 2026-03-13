@@ -1,10 +1,76 @@
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, CATEGORY_COLORS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { getTelegramLink, getPhoneLink } from '../telegram';
+import { useState, useEffect } from 'react';
+import { getTelegramUser } from '../telegram';
+import { addToFavorites, removeFromFavorites, isFavorite } from '../store';
+import { addToFavoritesLocal, removeFromFavoritesLocal, isFavoriteLocal } from '../storage';
 
-export function ListingCard({ listing }: { listing: Listing }) {
+export function ListingCard({ 
+  listing, 
+  onFavoriteToggle 
+}: { 
+  listing: Listing;
+  onFavoriteToggle?: () => void;
+}) {
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const timeAgo = getTimeAgo(listing.created_at);
   const isAvailable = listing.category !== 'buy';
+
+  useEffect(() => {
+    const checkFavorite = async () => {
+      const tgUser = getTelegramUser();
+      if (tgUser?.id) {
+        try {
+          const favorited = await isFavorite(listing.id, tgUser.id);
+          setIsFavorited(favorited);
+          return;
+        } catch (error) {
+          console.error('Error checking favorite status:', error);
+        }
+      }
+
+      // Fallback: localStorage для не-telegram среды
+      setIsFavorited(isFavoriteLocal(listing.id));
+    };
+    checkFavorite();
+  }, [listing.id]);
+
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const tgUser = getTelegramUser();
+
+    setIsLoading(true);
+    try {
+      if (tgUser?.id) {
+        if (isFavorited) {
+          await removeFromFavorites(listing.id, tgUser.id);
+          setIsFavorited(false);
+        } else {
+          await addToFavorites(listing.id, tgUser.id);
+          setIsFavorited(true);
+        }
+      } else {
+        // Fallback: localStorage
+        if (isFavorited) {
+          removeFromFavoritesLocal(listing.id);
+          setIsFavorited(false);
+        } else {
+          addToFavoritesLocal(listing.id);
+          setIsFavorited(true);
+        }
+      }
+
+      onFavoriteToggle?.();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="group overflow-hidden rounded-xl bg-white shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-300 flex flex-col">
@@ -29,6 +95,36 @@ export function ListingCard({ listing }: { listing: Listing }) {
           <span className="inline-block w-1.5 h-1.5 bg-white rounded-full"></span>
           {isAvailable ? 'Доступно' : 'Ищу'}
         </div>
+
+        {/* Favorite Button */}
+        <button
+          onClick={handleFavoriteToggle}
+          disabled={isLoading}
+          aria-label={isFavorited ? 'Удалить из избранного' : 'Добавить в избранное'}
+          className={`absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all bg-white/80 shadow-md ${
+            isFavorited ? 'text-red-500' : 'text-gray-600 hover:text-red-500'
+          } ${isLoading ? 'opacity-50' : ''}`}
+        >
+          {isLoading ? (
+            '⏳'
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill={isFavorited ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-red-500"
+              aria-hidden="true"
+            >
+              <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z" />
+            </svg>
+          )}
+        </button>
 
         {/* Photos indicator */}
         {listing.photos.length > 1 && (
@@ -79,7 +175,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
         {/* Price */}
         <div className="mt-auto pt-2 border-t border-gray-100">
-          <span className="text-lg font-bold text-gray-900">{listing.price}</span>
+          <span className="text-lg font-bold text-gray-900">{listing.price} ₽</span>
         </div>
 
         {/* Contacts */}

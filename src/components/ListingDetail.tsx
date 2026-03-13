@@ -116,7 +116,7 @@ export function ListingDetail({
           {/* Price & Category */}
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-bold text-gray-900">{listing.price}</span>
+              <span className="text-3xl font-bold text-gray-900">{listing.price} ₽</span>
               <span className="text-xs font-semibold text-gray-500">
                 {listing.is_approved ? '✅ Одобрено' : '⏳ Ожидает одобрения'}
               </span>
