@@ -205,7 +205,11 @@ export const ListingCard: React.FC<{
             {listing.contact_phone && (
               <a
                 href={getPhoneLink(listing.contact_phone)}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  openExternalLink(getPhoneLink(listing.contact_phone));
+                }}
                 className="flex items-center justify-center gap-1.5 rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-100 transition-all border border-green-200"
               >
                 📱 Позвонить

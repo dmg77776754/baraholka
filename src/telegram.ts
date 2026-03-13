@@ -76,3 +76,12 @@ export function getTelegramLink(username: string): string {
 export function getPhoneLink(phone: string): string {
   return `tel:${phone.replace(/[\s\-()]/g, '')}`;
 }
+
+export function openExternalLink(url: string) {
+  const tg = window.Telegram?.WebApp;
+  if (tg?.openLink) {
+    tg.openLink(url);
+    return;
+  }
+  window.open(url, '_blank');
+}

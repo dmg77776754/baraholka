@@ -179,6 +179,10 @@ export function ListingDetail({
             {listing.contact_phone && (
               <a
                 href={getPhoneLink(listing.contact_phone)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  openExternalLink(getPhoneLink(listing.contact_phone));
+                }}
                 className="flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-green-600 hover:bg-green-50 transition-all border border-green-200"
               >
                 📱 Позвонить
