@@ -37,22 +37,31 @@ export function ListingCard({
     checkFavorite();
   }, [listing.id]);
 
+  const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), ms)
+    );
+    return Promise.race([promise, timeout]) as Promise<T>;
+  };
+
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const tgUser = getTelegramUser();
 
     setIsLoading(true);
     try {
       if (tgUser?.id) {
         if (isFavorited) {
-          await removeFromFavorites(listing.id, tgUser.id);
+          await withTimeout(removeFromFavorites(listing.id, tgUser.id), 5000);
           setIsFavorited(false);
         } else {
-          await addToFavorites(listing.id, tgUser.id);
+          await withTimeout(addToFavorites(listing.id, tgUser.id), 5000);
           setIsFavorited(true);
         }
+        // Обновление списка только когда используется supabase
+        onFavoriteToggle?.();
       } else {
         // Fallback: localStorage
         if (isFavorited) {
@@ -63,8 +72,6 @@ export function ListingCard({
           setIsFavorited(true);
         }
       }
-
-      onFavoriteToggle?.();
     } catch (error) {
       console.error('Error toggling favorite:', error);
     } finally {
