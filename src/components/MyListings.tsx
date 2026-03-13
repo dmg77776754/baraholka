@@ -228,16 +228,27 @@ export function MyListings({ onClose }: { onClose: () => void }) {
               {listing.district && <span>📍 {DISTRICT_LABELS[listing.district]}</span>}
             </div>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(listing.id);
-              }}
-              disabled={deletingId === listing.id}
-              className="mt-3 w-full rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deletingId === listing.id ? '⏳ Удаляю...' : '🗑️ Удалить объявление'}
-            </button>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(listing.id);
+                }}
+                className="flex-1 rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-200 transition-all"
+              >
+                ✏️ Редактировать
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(listing.id);
+                }}
+                disabled={deletingId === listing.id}
+                className="flex-1 rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deletingId === listing.id ? '⏳ Удаляю...' : '🗑️ Удалить'}
+              </button>
+            </div>
           </div>
         ))}
       </div>
