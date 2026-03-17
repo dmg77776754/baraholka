@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getApprovedListings, deleteMyListing, updateListing } from './store';
+import { getApprovedListings, deleteMyListing } from './store';
 import { initTelegram, getTelegramUser } from './telegram';
 import { ListingCard } from './components/ListingCard';
 import { ListingDetail } from './components/ListingDetail';
@@ -102,7 +102,7 @@ export function App() {
       result = result.filter((l) => l.category === filterCat);
     }
     if (filterProduct !== 'all') {
-      result = result.filter((l) => l.productCategory === filterProduct);
+      result = result.filter((l) => l.product_category === filterProduct);
     }
     if (filterDistrict !== 'all') {
       result = result.filter((l) => l.district === filterDistrict);
@@ -167,7 +167,6 @@ export function App() {
             <button onClick={goToFeed} className="flex items-center gap-3 group">
               <span className="text-3xl group-hover:scale-110 transition-transform">🏪</span>
               <div className="flex flex-col items-start">
-                <span className="text-xs font-bold text-gray-400 tracking-widest">МАРКЕТПЛЕЙС</span>
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Барахолка</span>
               </div>
             </button>
@@ -211,7 +210,7 @@ export function App() {
 
       <main className="mx-auto max-w-lg">
         {page === 'feed' && (
-          <div className="px-4 pt-4 pb-24 space-y-4">
+          <div className="px-4 pt-4 pb-24 space-y-3">
             {/* Search */}
             <div className="relative group">
               <svg

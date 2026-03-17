@@ -5,6 +5,19 @@ import type { Listing } from '../types';
 
 const ADMIN_PIN = '532753';
 
+function formatPrice(price: string): string {
+  const lowerPrice = price.toLowerCase().trim();
+  const nonCurrencyWords = ['договорная', 'по договорённости', 'по договоренности', 'бесплатно', 'отдам даром', 'цена договорная'];
+  
+  for (const word of nonCurrencyWords) {
+    if (lowerPrice.includes(word)) {
+      return price;
+    }
+  }
+  
+  return `${price} ₽`;
+}
+
 export function AdminPanel({ onClose }: { onClose: () => void }) {
   const [authed, setAuthed] = useState(false);
   const [pin, setPin] = useState('');
@@ -201,7 +214,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                 <p className="text-xs text-gray-600 mt-1">
                   <span className="font-medium">{CATEGORY_LABELS[listing.category]}</span>
                   {' · '}
-                  <span className="text-gray-500">{listing.price} ₽</span>
+                  <span className="text-gray-500">{formatPrice(listing.price)}</span>
                   {listing.contact_telegram && <span> · 💬 {listing.contact_telegram}</span>}
                   {listing.contact_phone && <span> · 📱 {listing.contact_phone}</span>}
                 </p>

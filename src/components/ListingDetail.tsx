@@ -2,7 +2,18 @@ import { useState } from 'react';
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { getTelegramLink, getPhoneLink, normalizePhone } from '../telegram';
-
+function formatPrice(price: string): string {
+  const lowerPrice = price.toLowerCase().trim();
+  const nonCurrencyWords = ['договорная', 'по договорённости', 'по договоренности', 'бесплатно', 'отдам даром', 'цена договорная'];
+  
+  for (const word of nonCurrencyWords) {
+    if (lowerPrice.includes(word)) {
+      return price;
+    }
+  }
+  
+  return `${price} ₽`;
+}
 export function ListingDetail({
   listing,
   onClose,
@@ -40,7 +51,7 @@ export function ListingDetail({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-y-auto">
+      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b flex items-center justify-between p-4">
           <h2 className="text-lg font-bold text-gray-900">{listing.title}</h2>
@@ -53,7 +64,7 @@ export function ListingDetail({
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 overflow-y-auto max-h-[50vh]">
           {/* Photos */}
           {listing.photos.length > 0 ? (
             <div className="relative">
@@ -116,7 +127,7 @@ export function ListingDetail({
           {/* Price & Category */}
           <div className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-bold text-gray-900">{listing.price} ₽</span>
+              <span className="text-3xl font-bold text-gray-900">{formatPrice(listing.price)}</span>
               <span className="text-xs font-semibold text-gray-500">
                 {listing.is_approved ? '✅ Одобрено' : '⏳ Ожидает одобрения'}
               </span>
@@ -161,40 +172,38 @@ export function ListingDetail({
           </div>
 
           {/* Contacts */}
-          <div className="space-y-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+          <div className="space-y-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
             <h3 className="text-sm font-semibold text-gray-700">📞 Контакты продавца</h3>
 
-            {listing.contact_telegram && (
-              <a
-                href={getTelegramLink(listing.contact_telegram)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-all border border-blue-200"
-              >
-                💬 Написать в Telegram
-                <span className="text-xs text-gray-500">({listing.contact_telegram})</span>
-              </a>
-            )}
+            <div className={`grid gap-2 ${listing.contact_telegram && listing.contact_phone && normalizePhone(listing.contact_phone) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {listing.contact_telegram && (
+                <a
+                  href={getTelegramLink(listing.contact_telegram)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-all border border-blue-200"
+                >
+                  💬 Telegram
+                </a>
+              )}
 
-            {listing.contact_phone && normalizePhone(listing.contact_phone) && (
-              <a
-                href={getPhoneLink(listing.contact_phone)}
-                onClick={(e) => {
-                  e.preventDefault();
-                  openExternalLink(getPhoneLink(listing.contact_phone));
-                }}
-                className="flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-green-600 hover:bg-green-50 transition-all border border-green-200"
-              >
-                📱 Позвонить
-                <span className="text-xs text-gray-500">({listing.contact_phone})</span>
-              </a>
-            )}
-            {listing.contact_phone && !normalizePhone(listing.contact_phone) && (
-              <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm font-medium text-red-600 border border-red-200">
-                ⚠️ Неверный номер
-                <span className="text-xs text-red-500">{listing.contact_phone}</span>
-              </div>
-            )}
+              {listing.contact_phone && normalizePhone(listing.contact_phone) && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openExternalLink(getPhoneLink(listing.contact_phone));
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-green-600 hover:bg-green-50 transition-all border border-green-200"
+                >
+                  📱 Позвонить
+                </button>
+              )}
+              {listing.contact_phone && !normalizePhone(listing.contact_phone) && (
+                <div className="col-span-full flex items-center justify-center gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm font-medium text-red-600 border border-red-200">
+                  ⚠️ Неверный номер
+                </div>
+              )}
+            </div>
 
             {!listing.contact_telegram && !listing.contact_phone && (
               <p className="text-xs text-gray-500 italic">Контактная информация недоступна</p>

@@ -8,6 +8,19 @@ import type { Listing } from '../types';
 import { CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { getMyListingIds, removeFromMyListings } from '../storage';
 
+function formatPrice(price: string): string {
+  const lowerPrice = price.toLowerCase().trim();
+  const nonCurrencyWords = ['договорная', 'по договорённости', 'по договоренности', 'бесплатно', 'отдам даром', 'цена договорная'];
+  
+  for (const word of nonCurrencyWords) {
+    if (lowerPrice.includes(word)) {
+      return price;
+    }
+  }
+  
+  return `${price} ₽`;
+}
+
 export function MyListings({ onClose }: { onClose: () => void }) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,7 +216,7 @@ export function MyListings({ onClose }: { onClose: () => void }) {
               <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-semibold text-gray-900 truncate">{listing.title}</h4>
                 <p className="text-xs text-gray-600 mt-1">
-                  <span className="font-medium">{listing.price} ₽</span>
+                  <span className="font-medium">{formatPrice(listing.price)}</span>
                   {' · '}
                   <span>{CATEGORY_LABELS[listing.category]}</span>
                 </p>

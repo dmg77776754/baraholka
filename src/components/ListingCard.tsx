@@ -6,6 +6,19 @@ import { getTelegramUser } from '../telegram';
 import { addToFavorites, removeFromFavorites, isFavorite } from '../store';
 import { addToFavoritesLocal, removeFromFavoritesLocal, isFavoriteLocal } from '../storage';
 
+function formatPrice(price: string): string {
+  const lowerPrice = price.toLowerCase().trim();
+  const nonCurrencyWords = ['договорная', 'по договорённости', 'по договоренности', 'бесплатно', 'отдам даром', 'цена договорная'];
+  
+  for (const word of nonCurrencyWords) {
+    if (lowerPrice.includes(word)) {
+      return price;
+    }
+  }
+  
+  return `${price} ₽`;
+}
+
 export const ListingCard: React.FC<{ 
   listing: Listing;
   onFavoriteToggle?: () => void;
@@ -83,7 +96,7 @@ export const ListingCard: React.FC<{
   };
 
   return (
-    <div className="group overflow-hidden rounded-xl bg-white shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-300 flex flex-col">
+    <div className="group overflow-hidden rounded-xl bg-white shadow-sm border border-gray-200 hover:shadow-lg hover:border-gray-300 transition-all duration-300 flex flex-col h-full">
       {/* Image Container - Square aspect ratio */}
       <div className="relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 aspect-square">
         {listing.photos.length > 0 ? (
@@ -100,12 +113,6 @@ export const ListingCard: React.FC<{
           </div>
         )}
         
-        {/* Status Badge */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-medium shadow-md">
-          <span className="inline-block w-1.5 h-1.5 bg-white rounded-full"></span>
-          {isAvailable ? 'Доступно' : 'Ищу'}
-        </div>
-
         {/* Favorite Button */}
         <button
           onClick={handleFavoriteToggle}
@@ -149,10 +156,10 @@ export const ListingCard: React.FC<{
         </div>
       </div>
 
-      <div className="p-3 space-y-2 flex flex-col flex-1">
+      <div className="p-3 space-y-2 flex flex-col flex-grow">
         {/* Title & Category */}
-        <div className="flex items-start justify-between gap-1 min-h-[2.5rem]">
-          <h3 className="text-sm font-semibold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 flex-1">
+        <div className="flex items-start justify-between gap-1 min-h-[3.5rem]">
+          <h3 className="text-sm font-semibold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors line-clamp-3 flex-1">
             {listing.title}
           </h3>
           <span
@@ -180,12 +187,12 @@ export const ListingCard: React.FC<{
 
         {/* Description - optional */}
         {listing.description && (
-          <p className="text-xs text-gray-500 line-clamp-1 mt-1">{listing.description}</p>
+          <p className="text-xs text-gray-500 line-clamp-2 mt-1">{listing.description}</p>
         )}
 
         {/* Price */}
         <div className="mt-auto pt-2 border-t border-gray-100">
-          <span className="text-lg font-bold text-gray-900">{listing.price} ₽</span>
+          <span className="text-lg font-bold text-gray-900">{formatPrice(listing.price)}</span>
         </div>
 
         {/* Contacts */}
@@ -203,8 +210,7 @@ export const ListingCard: React.FC<{
               </a>
             )}
             {listing.contact_phone && normalizePhone(listing.contact_phone) && (
-              <a
-                href={getPhoneLink(listing.contact_phone)}
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -213,7 +219,7 @@ export const ListingCard: React.FC<{
                 className="flex items-center justify-center gap-1.5 rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-100 transition-all border border-green-200"
               >
                 📱 Позвонить
-              </a>
+              </button>
             )}
             {listing.contact_phone && !normalizePhone(listing.contact_phone) && (
               <span className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-600 border border-red-200">
