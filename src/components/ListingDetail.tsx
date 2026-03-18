@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
-import { getTelegramLink, getPhoneLink, normalizePhone } from '../telegram';
+import { getTelegramLink, normalizePhone } from '../telegram';
 function formatPrice(price: string): string {
   const lowerPrice = price.toLowerCase().trim();
   const nonCurrencyWords = ['договорная', 'по договорённости', 'по договоренности', 'бесплатно', 'отдам даром', 'цена договорная'];
@@ -177,26 +177,29 @@ export function ListingDetail({
 
             <div className={`grid gap-2 ${listing.contact_telegram && listing.contact_phone && normalizePhone(listing.contact_phone) ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {listing.contact_telegram && (
-                <a
-                  href={getTelegramLink(listing.contact_telegram)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-all border border-blue-200"
-                >
-                  💬 Telegram
-                </a>
+                <div className="flex flex-col items-center gap-2">
+                  <a
+                    href={getTelegramLink(listing.contact_telegram)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-all border border-blue-200"
+                  >
+                    💬 Telegram
+                  </a>
+                  <p className="text-xs text-gray-600">@{listing.contact_telegram}</p>
+                </div>
               )}
 
               {listing.contact_phone && normalizePhone(listing.contact_phone) && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openExternalLink(getPhoneLink(listing.contact_phone));
-                  }}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-green-600 hover:bg-green-50 transition-all border border-green-200"
-                >
-                  📱 Позвонить
-                </button>
+                <div className="flex flex-col items-center gap-2">
+                  <a
+                    href={`tel:${normalizePhone(listing.contact_phone)}`}
+                    className="flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-green-600 hover:bg-green-50 transition-all border border-green-200"
+                  >
+                    📱 Позвонить
+                  </a>
+                  <p className="text-xs text-gray-600">{listing.contact_phone}</p>
+                </div>
               )}
               {listing.contact_phone && !normalizePhone(listing.contact_phone) && (
                 <div className="col-span-full flex items-center justify-center gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm font-medium text-red-600 border border-red-200">

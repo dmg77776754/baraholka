@@ -109,22 +109,7 @@ export function isValidTelegramUsername(username: string): boolean {
   return normalizeTelegramUsername(username) !== null;
 }
 
-export function getPhoneLink(phone: string): string {
-  const normalized = normalizePhone(phone);
-  if (!normalized) return '#';
-  return `tel:${normalized}`;
-}
-
 export function getTelegramLink(username: string): string {
   const clean = normalizeTelegramUsername(username) || username;
   return `https://t.me/${clean}`;
-}
-
-export function openExternalLink(url: string) {
-  const tg = window.Telegram?.WebApp;
-  if (tg?.openLink) {
-    tg.openLink(url);
-    return;
-  }
-  window.open(url, '_blank');
 }

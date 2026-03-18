@@ -38,9 +38,6 @@ export function CreateListingForm({
   const [tgValid, setTgValid] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const isEditMode = !!editingListing;
-  const tgUser = getTelegramUser();
-
   const formatPhoneNumber = (value: string): string => {
     // Убираем все нецифровые символы
     const digits = value.replace(/\D/g, '');

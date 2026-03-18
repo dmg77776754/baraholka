@@ -1,6 +1,6 @@
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, CATEGORY_COLORS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
-import { getTelegramLink, getPhoneLink, normalizePhone } from '../telegram';
+import { getTelegramLink, normalizePhone } from '../telegram';
 import React, { useState, useEffect } from 'react';
 import { getTelegramUser } from '../telegram';
 import { addToFavorites, removeFromFavorites, isFavorite } from '../store';
@@ -210,16 +210,13 @@ export const ListingCard: React.FC<{
               </a>
             )}
             {listing.contact_phone && normalizePhone(listing.contact_phone) && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  openExternalLink(getPhoneLink(listing.contact_phone));
-                }}
+              <a
+                href={`tel:${normalizePhone(listing.contact_phone)}`}
+                onClick={(e) => e.stopPropagation()}
                 className="flex items-center justify-center gap-1.5 rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-100 transition-all border border-green-200"
               >
                 📱 Позвонить
-              </button>
+              </a>
             )}
             {listing.contact_phone && !normalizePhone(listing.contact_phone) && (
               <span className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-600 border border-red-200">
