@@ -3,6 +3,7 @@ import type { Listing, Category, ProductCategory, District } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { updateMyListing } from '../store';
 import { getTelegramUser } from '../telegram';
+import { getUserId } from '../storage';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
 const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -45,11 +46,8 @@ export function EditListingForm({
     try {
       setIsLoading(true);
       
-      const tgUser = getTelegramUser();
-      if (!tgUser?.id) {
-        throw new Error('Ошибка: не удалось определить пользователя Telegram');
-      }
-      await updateMyListing(listing.id, tgUser.id, {
+      const userId = getUserId();
+      await updateMyListing(listing.id, userId, {
         title: title.trim(),
         description: description.trim(),
         price: price.trim(),

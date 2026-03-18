@@ -6,7 +6,7 @@ import { CreateListingForm } from './CreateListingForm';
 import { getTelegramUser } from '../telegram';
 import type { Listing } from '../types';
 import { CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
-import { getMyListingIds, removeFromMyListings } from '../storage';
+import { getMyListingIds, removeFromMyListings, getUserId } from '../storage';
 
 function formatPrice(price: string): string {
   const lowerPrice = price.toLowerCase().trim();
@@ -66,16 +66,13 @@ export function MyListings({ onClose }: { onClose: () => void }) {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!tgUser?.id) {
-      setError('Ошибка: не удалось определить пользователя');
-      return;
-    }
+    const userId = getUserId();
     
     try {
       setDeletingId(id);
 
       // Удалить из базы с проверкой владельца
-      await deleteMyListing(id, tgUser.id);
+      await deleteMyListing(id, userId);
 
       // Удалить из localStorage
       removeFromMyListings(id);

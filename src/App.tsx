@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getApprovedListings, deleteMyListing } from './store';
-import { initTelegram, getTelegramUser } from './telegram';
+import { initTelegram } from './telegram';
 import { ListingCard } from './components/ListingCard';
 import { ListingDetail } from './components/ListingDetail';
 import { CreateListingForm } from './components/CreateListingForm';
@@ -8,7 +8,7 @@ import { EditListingForm } from './components/EditListingForm';
 import { AdminPanel } from './components/AdminPanel';
 import { MyListings } from './components/MyListings';
 import { Favorites } from './components/Favorites';
-import { getMyListingIds, removeFromMyListings } from './storage';
+import { getMyListingIds, removeFromMyListings, getUserId } from './storage';
 import type { Listing, Category, ProductCategory, District } from './types';
 import {
   CATEGORY_LABELS,
@@ -40,8 +40,6 @@ export function App() {
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [myListingIds, setMyListingIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-
-  const tgUser = getTelegramUser();
 
   // Загрузить одобренные объявления с Supabase
   const refresh = useCallback(async () => {
@@ -75,14 +73,11 @@ export function App() {
   };
 
   const handleDeleteFromFeed = async (id: string) => {
-    if (!tgUser?.id) {
-      alert('Ошибка: не удалось определить пользователя');
-      return;
-    }
+    const userId = getUserId();
     
     try {
       // Используем функцию с проверкой владельца
-      await deleteMyListing(id, tgUser.id);
+      await deleteMyListing(id, userId);
       removeFromMyListings(id);
       setListings(listings.filter(l => l.id !== id));
       setMyListingIds(getMyListingIds());
@@ -171,15 +166,9 @@ export function App() {
               </div>
             </button>
             <div className="flex items-center gap-2">
-              {tgUser ? (
-                <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
-                  👤 {tgUser.firstName || tgUser.username}
-                </span>
-              ) : (
-                <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
-                  🚫 Не в Telegram
-                </span>
-              )}
+              <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
+                👤 Пользователь
+              </span>
               <button
                 onClick={() => setPage('my-listings')}
                 className="flex flex-col items-center rounded-lg p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"

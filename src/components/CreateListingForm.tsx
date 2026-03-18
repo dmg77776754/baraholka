@@ -3,7 +3,7 @@ import type { Category, ProductCategory, District, Listing } from '../types';
 import { CATEGORY_LABELS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { addListing, updateMyListing } from '../store';
 import { getTelegramUser, normalizePhone, isValidPhone, normalizeTelegramUsername, isValidTelegramUsername } from '../telegram';
-import { addToMyListings } from '../storage';
+import { addToMyListings, getUserId } from '../storage';
 
 const CATEGORIES: Category[] = ['sell', 'buy', 'free', 'services'];
 const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -147,11 +147,9 @@ export function CreateListingForm({
       
       if (isEditMode && editingListing) {
         // Режим редактирования с проверкой владельца
-        if (!tgUser?.id) {
-          throw new Error('Ошибка: не удалось определить пользователя');
-        }
+        const userId = getUserId();
         
-        await updateMyListing(editingListing.id, tgUser.id, {
+        await updateMyListing(editingListing.id, userId, {
           title: title.trim(),
           description: description.trim(),
           price: price.trim(),
@@ -172,7 +170,7 @@ export function CreateListingForm({
           contact: mainContact,
           contact_telegram: normalizedTelegram || undefined,
           contact_phone: normalizedPhone || undefined,
-          telegram_user_id: tgUser?.id,
+          user_id: getUserId(),
           telegram_username: tgUser?.username,
         });
 

@@ -2,9 +2,8 @@ import type { Listing } from '../types';
 import { CATEGORY_LABELS, CATEGORY_COLORS, PRODUCT_CATEGORY_LABELS, DISTRICT_LABELS } from '../types';
 import { getTelegramLink, normalizePhone } from '../telegram';
 import React, { useState, useEffect } from 'react';
-import { getTelegramUser } from '../telegram';
 import { addToFavorites, removeFromFavorites, isFavorite } from '../store';
-import { addToFavoritesLocal, removeFromFavoritesLocal, isFavoriteLocal } from '../storage';
+import { addToFavoritesLocal, removeFromFavoritesLocal, isFavoriteLocal, getUserId } from '../storage';
 
 function formatPrice(price: string): string {
   const lowerPrice = price.toLowerCase().trim();
@@ -26,22 +25,19 @@ export const ListingCard: React.FC<{
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const timeAgo = getTimeAgo(listing.created_at);
-  const isAvailable = listing.category !== 'buy';
 
   useEffect(() => {
     const checkFavorite = async () => {
-      const tgUser = getTelegramUser();
-      if (tgUser?.id) {
-        try {
-          const favorited = await isFavorite(listing.id, tgUser.id);
-          setIsFavorited(favorited);
-          return;
-        } catch (error) {
-          console.error('Error checking favorite status:', error);
-        }
+      const userId = getUserId();
+      try {
+        const favorited = await isFavorite(listing.id, userId);
+        setIsFavorited(favorited);
+        return;
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
       }
 
-      // Fallback: localStorage для не-telegram среды
+      // Fallback: localStorage
       setIsFavorited(isFavoriteLocal(listing.id));
     };
     checkFavorite();
@@ -51,32 +47,21 @@ export const ListingCard: React.FC<{
     e.preventDefault();
     e.stopPropagation();
     
-    const tgUser = getTelegramUser();
+    const userId = getUserId();
 
     setIsLoading(true);
     try {
-      // Сначала пытаемся использовать Supabase (если есть пользователь)
-      if (tgUser?.id) {
-        try {
-          if (isFavorited) {
-            await removeFromFavorites(listing.id, tgUser.id);
-            setIsFavorited(false);
-          } else {
-            await addToFavorites(listing.id, tgUser.id);
-            setIsFavorited(true);
-          }
-        } catch (supabaseError) {
-          console.warn('Supabase favorites failed, falling back to localStorage:', supabaseError);
-          // Fallback: localStorage
-          if (isFavorited) {
-            removeFromFavoritesLocal(listing.id);
-            setIsFavorited(false);
-          } else {
-            addToFavoritesLocal(listing.id);
-            setIsFavorited(true);
-          }
+      // Сначала пытаемся использовать Supabase
+      try {
+        if (isFavorited) {
+          await removeFromFavorites(listing.id, userId);
+          setIsFavorited(false);
+        } else {
+          await addToFavorites(listing.id, userId);
+          setIsFavorited(true);
         }
-      } else {
+      } catch (supabaseError) {
+        console.warn('Supabase favorites failed, falling back to localStorage:', supabaseError);
         // Fallback: localStorage
         if (isFavorited) {
           removeFromFavoritesLocal(listing.id);
@@ -86,7 +71,6 @@ export const ListingCard: React.FC<{
           setIsFavorited(true);
         }
       }
-
       onFavoriteToggle?.();
     } catch (error) {
       console.error('Error toggling favorite:', error);

@@ -37,11 +37,12 @@ export async function addListing(data: {
   contact: string;
   contact_telegram?: string;
   contact_phone?: string;
-  telegram_user_id?: number;
+  user_id: string;
   telegram_username?: string;
 }): Promise<Listing> {
   const listingData = {
     ...data,
+    telegram_user_id: data.user_id, // Map user_id to telegram_user_id in database
     is_approved: false,
     created_at: new Date().toISOString(),
   };
@@ -99,7 +100,7 @@ export async function getMyListings(telegramUserId: number): Promise<Listing[]> 
 // Обновить своё объявление (редактирование) с проверкой владельца
 export async function updateMyListing(
   id: string,
-  telegramUserId: number,
+  userId: string,
   updateData: {
     title?: string;
     description?: string;
@@ -117,7 +118,7 @@ export async function updateMyListing(
     .single();
 
   if (fetchError) throw fetchError;
-  if (listing.telegram_user_id !== telegramUserId) {
+  if (listing.telegram_user_id !== userId) {
     throw new Error('Вы не можете редактировать чужое объявление');
   }
 
@@ -163,7 +164,7 @@ export async function updateListing(
 }
 
 // Удалить своё объявление (с проверкой принадлежности)
-export async function deleteMyListing(id: string, telegramUserId: number): Promise<void> {
+export async function deleteMyListing(id: string, userId: string): Promise<void> {
   // Проверяем что объявление принадлежит пользователю
   const { data: listing, error: fetchError } = await supabase
     .from('listings')
@@ -172,7 +173,7 @@ export async function deleteMyListing(id: string, telegramUserId: number): Promi
     .single();
 
   if (fetchError) throw fetchError;
-  if (listing.telegram_user_id !== telegramUserId) {
+  if (listing.telegram_user_id !== userId) {
     throw new Error('Вы не можете удалить чужое объявление');
   }
 
@@ -188,7 +189,7 @@ export async function deleteMyListing(id: string, telegramUserId: number): Promi
 // Функции для избранных объявлений
 
 // Добавить в избранное
-export async function addToFavorites(listingId: string, userId: number): Promise<void> {
+export async function addToFavorites(listingId: string, userId: string): Promise<void> {
   const { error } = await supabase
     .from('favorites')
     .insert({
@@ -204,7 +205,7 @@ export async function addToFavorites(listingId: string, userId: number): Promise
 }
 
 // Удалить из избранного
-export async function removeFromFavorites(listingId: string, userId: number): Promise<void> {
+export async function removeFromFavorites(listingId: string, userId: string): Promise<void> {
   const { error } = await supabase
     .from('favorites')
     .delete()
@@ -215,7 +216,7 @@ export async function removeFromFavorites(listingId: string, userId: number): Pr
 }
 
 // Проверить, в избранном ли объявление
-export async function isFavorite(listingId: string, userId: number): Promise<boolean> {
+export async function isFavorite(listingId: string, userId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('favorites')
     .select('id')
@@ -228,7 +229,7 @@ export async function isFavorite(listingId: string, userId: number): Promise<boo
 }
 
 // Получить избранные объявления пользователя
-export async function getFavorites(userId: number): Promise<Listing[]> {
+export async function getFavorites(userId: string): Promise<Listing[]> {
   const { data, error } = await supabase
     .from('favorites')
     .select(`

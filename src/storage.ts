@@ -4,6 +4,25 @@
  */
 
 const MY_LISTINGS_KEY = 'baraholka_my_listings';
+const USER_ID_KEY = 'baraholka_user_id';
+
+/**
+ * Получить уникальный ID пользователя (генерируется при первом использовании)
+ */
+export function getUserId(): string {
+  try {
+    let userId = localStorage.getItem(USER_ID_KEY);
+    if (!userId) {
+      userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(USER_ID_KEY, userId);
+    }
+    return userId;
+  } catch (err) {
+    console.error('Error getting user ID from localStorage:', err);
+    // Fallback - generate temporary ID
+    return `temp_${Date.now()}`;
+  }
+}
 
 /**
  * Получить список ID своих объявлений

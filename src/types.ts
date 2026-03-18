@@ -16,7 +16,7 @@ export interface Listing {
   contact: string; // legacy field for backward compat
   contact_telegram?: string; // @username
   contact_phone?: string; // +7 900 000-00-00
-  telegram_user_id?: number;
+  telegram_user_id?: string;
   telegram_username?: string;
   is_approved: boolean;
   created_at: string; // ISO timestamp

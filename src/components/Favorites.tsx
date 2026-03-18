@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getFavorites, getApprovedListings } from '../store';
-import { getTelegramUser } from '../telegram';
+import { getUserId } from '../storage';
 import { ListingCard } from './ListingCard';
 import { ListingDetail } from './ListingDetail';
 import { getFavoriteIds } from '../storage';
@@ -12,8 +12,6 @@ export function Favorites({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
 
-  const tgUser = getTelegramUser();
-
   useEffect(() => {
     loadFavorites();
   }, []);
@@ -23,16 +21,16 @@ export function Favorites({ onClose }: { onClose: () => void }) {
       setIsLoading(true);
       setError(null);
 
-      // Сначала пытаемся загрузить из Supabase (если есть пользователь)
-      if (tgUser?.id) {
-        try {
-          const data = await getFavorites(tgUser.id);
-          setFavorites(data);
-          return;
-        } catch (supabaseError) {
-          console.warn('Supabase favorites failed, falling back to localStorage:', supabaseError);
-          // Продолжаем к localStorage fallback
-        }
+      const userId = getUserId();
+
+      // Сначала пытаемся загрузить из Supabase
+      try {
+        const data = await getFavorites(userId);
+        setFavorites(data);
+        return;
+      } catch (supabaseError) {
+        console.warn('Supabase favorites failed, falling back to localStorage:', supabaseError);
+        // Продолжаем к localStorage fallback
       }
 
       // Fallback: localStorage favorites
