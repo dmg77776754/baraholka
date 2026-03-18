@@ -102,6 +102,9 @@ export function CreateListingForm({
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const isEditMode = !!editingListing;
+  const tgUser = getTelegramUser();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
