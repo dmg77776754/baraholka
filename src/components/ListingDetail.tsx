@@ -51,9 +51,9 @@ export function ListingDetail({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-hidden">
+      <div className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b flex items-center justify-between p-4">
+        <div className="sticky top-0 bg-white border-b flex items-center justify-between p-4 flex-shrink-0">
           <h2 className="text-lg font-bold text-gray-900">{listing.title}</h2>
           <button
             onClick={onClose}
@@ -64,7 +64,7 @@ export function ListingDetail({
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4 overflow-y-auto max-h-[50vh]">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Photos */}
           {listing.photos.length > 0 ? (
             <div className="relative">

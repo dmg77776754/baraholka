@@ -38,8 +38,28 @@ export function CreateListingForm({
   const [tgValid, setTgValid] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const tgUser = getTelegramUser();
   const isEditMode = !!editingListing;
+  const tgUser = getTelegramUser();
+
+  const formatPhoneNumber = (value: string): string => {
+    // Убираем все нецифровые символы
+    const digits = value.replace(/\D/g, '');
+    
+    // Если начинается с 8, заменяем на +7
+    if (digits.startsWith('8') && digits.length === 11) {
+      const formatted = `+7 ${digits.slice(1, 4)} ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9)}`;
+      return formatted;
+    }
+    
+    // Если начинается с 7 или +7
+    if ((digits.startsWith('7') || digits.startsWith('+7')) && digits.length >= 11) {
+      const cleanDigits = digits.replace(/^(\+?7)/, '');
+      const formatted = `+7 ${cleanDigits.slice(0, 3)} ${cleanDigits.slice(3, 6)}-${cleanDigits.slice(6, 8)}-${cleanDigits.slice(8)}`;
+      return formatted;
+    }
+    
+    return value;
+  };
 
   const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -273,7 +293,7 @@ export function CreateListingForm({
           className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-blue-500 focus:ring-3 focus:ring-blue-100 shadow-sm"
         />
         <p className="mt-2 text-xs text-gray-500">
-          Указывайте цену в рублях без валютных символов (только цифры и пробелы).
+          Указывайте цену в рублях без валютных символов (только цифры и пробелы) или напишите "договорная".
         </p>
       </div>
 
@@ -422,7 +442,8 @@ export function CreateListingForm({
               type="tel"
               value={contactPhone}
               onChange={(e) => {
-                setContactPhone(e.target.value);
+                const formatted = formatPhoneNumber(e.target.value);
+                setContactPhone(formatted);
                 if (!phoneValid) setPhoneValid(true);
               }}
               placeholder="+7 900 000-00-00"
@@ -431,6 +452,9 @@ export function CreateListingForm({
                 phoneValid ? 'border-gray-200' : 'border-red-300 bg-red-50'
               }`}
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Формат: +7 XXX XXX-XX-XX или 8XXXXXXXXXX
+            </p>
           </div>
           {!phoneValid && (
             <p className="mt-2 text-xs text-red-600">Неверный формат номера (например +7 999 123-45-67)</p>
