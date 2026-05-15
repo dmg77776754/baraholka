@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getApprovedListings, deleteMyListing } from './store';
 import { initTelegram } from './telegram';
 import { ListingCard } from './components/ListingCard';
@@ -31,6 +31,7 @@ const DISTRICTS: District[] = ['pervomayskoe', 'kivenappa'];
 export function App() {
   const [page, setPage] = useState<Page>('feed');
   const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(true);
   const [filterCat, setFilterCat] = useState<Category | 'all'>('all');
   const [filterProduct, setFilterProduct] = useState<ProductCategory | 'all'>('all');
   const [filterDistrict, setFilterDistrict] = useState<District | 'all'>('all');
@@ -42,12 +43,21 @@ export function App() {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Загрузить одобренные объявления с Supabase
+  const refreshRequestId = useRef(0);
   const refresh = useCallback(async () => {
+    const requestId = ++refreshRequestId.current;
+    setIsLoadingListings(true);
+
     try {
       const data = await getApprovedListings();
+      if (requestId !== refreshRequestId.current) return;
       setListings(data);
     } catch (err) {
       console.error('Error loading listings:', err);
+    } finally {
+      if (requestId === refreshRequestId.current) {
+        setIsLoadingListings(false);
+      }
     }
   }, []);
 
@@ -59,8 +69,12 @@ export function App() {
   }, [refresh]);
 
   const goToFeed = async () => {
-    await refresh();
+    resetFilters();
+    setShowAllCategories(false);
+    setSelectedListing(null);
     setPage('feed');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await refresh();
   };
 
   const handleEditFromFeed = async (id: string) => {
@@ -156,38 +170,31 @@ export function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/98 backdrop-blur-lg border-b border-gray-100 shadow-md">
-        <div className="mx-auto max-w-lg px-4 py-3">
-          <div className="flex items-center justify-between">
-            <button onClick={goToFeed} className="flex items-center gap-3 group">
-              <span className="text-3xl group-hover:scale-110 transition-transform">🏪</span>
-              <div className="flex flex-col items-start">
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Барахолка</span>
-              </div>
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+        <div className="mx-auto max-w-lg px-4 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <button onClick={goToFeed} className="flex items-center gap-2">
+              <span className="text-2xl">🏪</span>
+              <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Барахолка</span>
             </button>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 max-w-[100px] truncate px-3 py-1.5 bg-gray-100 rounded-full">
-                👤 Пользователь
-              </span>
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage('my-listings')}
-                className="flex flex-col items-center rounded-lg p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                className="rounded-lg p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                 title="Мои объявления"
               >
                 <span className="text-xl">📋</span>
-                <span className="text-[10px] mt-1 text-gray-500">Мои</span>
               </button>
               <button
                 onClick={() => setPage('favorites')}
-                className="flex flex-col items-center rounded-lg p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
+                className="rounded-lg p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
                 title="Избранное"
               >
                 <span className="text-xl">❤️</span>
-                <span className="text-[10px] mt-1 text-gray-500">Изб.</span>
               </button>
               <button
                 onClick={() => setPage('admin')}
-                className="rounded-lg p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                className="rounded-lg p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                 title="Админ-панель"
               >
                 ⚙️
@@ -305,7 +312,6 @@ export function App() {
                     }`}>
                       {PRODUCT_CATEGORY_LABELS[pc].replace(/^[^\s]+\s/, '')}
                     </span>
-                    {filterProduct === pc && <span className="text-xs leading-tight font-bold">✓</span>}
                   </button>
                 ))}
               </div>
@@ -335,7 +341,13 @@ export function App() {
             )}
 
             {/* Listings */}
-            {filtered.length === 0 ? (
+            {isLoadingListings ? (
+              <div className="grid grid-cols-2 gap-3 animate-pulse">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="h-52 rounded-[28px] bg-gray-200/80 border border-gray-200" />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="mb-4 text-6xl">📭</div>
                 <h3 className="mb-2 text-lg font-bold text-gray-900">
@@ -362,7 +374,7 @@ export function App() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                   >
                     <option value="newest">Сначала новые</option>
                     <option value="price_low">Цена ↑</option>
